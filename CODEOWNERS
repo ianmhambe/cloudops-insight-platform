@@ -1,0 +1,23 @@
+# This file defines code owners for the repository
+# Code owners are automatically requested for review when someone opens a pull request
+
+# Global owners (will be requested for all changes unless overridden)
+* @YOUR_GITHUB_USERNAME
+
+# Application code
+/app/ @YOUR_GITHUB_USERNAME
+
+# Infrastructure as Code
+/terraform/ @YOUR_GITHUB_USERNAME
+/k8s/ @YOUR_GITHUB_USERNAME
+
+# CI/CD pipelines
+/.github/workflows/ @YOUR_GITHUB_USERNAME
+
+# Documentation
+/docs/ @YOUR_GITHUB_USERNAME
+README.md @YOUR_GITHUB_USERNAME
+
+# Configuration files
+*.yaml @YOUR_GITHUB_USERNAME
+*.yml @YOUR_GITHUB_USERNAME

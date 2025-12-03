@@ -1,0 +1,102 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/**'
+      - 'k8s/**'
+      - '.github/workflows/cd.yml'
+
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/cloudops-app
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        working-directory: ./app
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag ${{ env.DOCKER_IMAGE }}:${{ env.IMAGE_TAG }} \
+            --tag ${{ env.DOCKER_IMAGE }}:latest \
+            --push \
+            .
+
+      - name: Generate deployment artifact
+        run: |
+          echo "IMAGE=${{ env.DOCKER_IMAGE }}:${{ env.IMAGE_TAG }}" > deployment.env
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-info
+          path: deployment.env
+
+  deploy-to-kind:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-info
+
+      - name: Load deployment info
+        run: cat deployment.env >> $GITHUB_ENV
+
+      - name: Setup KinD
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: cloudops-cluster
+          config: kind-config.yaml
+
+      - name: Verify cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Create namespace
+        run: |
+          kubectl create namespace cloudops --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Update image in deployment
+        run: |
+          sed -i "s|YOUR_DOCKERHUB_USERNAME/cloudops-app:latest|${{ env.IMAGE }}|g" k8s/base/deployment.yaml
+
+      - name: Deploy application
+        run: |
+          kubectl apply -f k8s/base/deployment.yaml
+
+      - name: Wait for deployment
+        run: |
+          kubectl rollout status deployment/cloudops-app -n cloudops --timeout=5m
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n cloudops
+          kubectl get svc -n cloudops
+
+      - name: Run smoke tests
+        run: |
+          kubectl wait --for=condition=ready pod -l app=cloudops-app -n cloudops --timeout=2m
+          POD_NAME=$(kubectl get pod -l app=cloudops-app -n cloudops -o jsonpath="{.items[0].metadata.name}")
+          kubectl exec $POD_NAME -n cloudops -- curl -f http://localhost:3000/healthz
