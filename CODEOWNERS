@@ -2,22 +2,22 @@
 # Code owners are automatically requested for review when someone opens a pull request
 
 # Global owners (will be requested for all changes unless overridden)
-* @YOUR_GITHUB_USERNAME
+* @mhambe
 
 # Application code
-/app/ @YOUR_GITHUB_USERNAME
+/app/ @mhambe
 
 # Infrastructure as Code
-/terraform/ @YOUR_GITHUB_USERNAME
-/k8s/ @YOUR_GITHUB_USERNAME
+/terraform/ @mhambe
+/k8s/ @mhambe
 
 # CI/CD pipelines
-/.github/workflows/ @YOUR_GITHUB_USERNAME
+/.github/workflows/ @mhambe
 
 # Documentation
-/docs/ @YOUR_GITHUB_USERNAME
-README.md @YOUR_GITHUB_USERNAME
+/docs/ @mhambe
+README.md @mhambe
 
 # Configuration files
-*.yaml @YOUR_GITHUB_USERNAME
-*.yml @YOUR_GITHUB_USERNAME
+*.yaml @mhambe
+*.yml @mhambe
